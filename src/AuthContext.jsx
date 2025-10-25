@@ -1,7 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useContext } from "react";
 import { createContext } from "react";
-
 
 const AuthContext = createContext();
 
@@ -12,6 +11,27 @@ export const AuthProvider = ({
     const [user, setUser] = useState(null);
     const [jwt, setJwt] = useState(null);
     const [message, setMessage] = useState(null);
+    useEffect(() => {
+        const storedJwt = localStorage.getItem("jwt");
+        if (storedJwt) {
+            setJwt(storedJwt);
+            fetch("http://127.0.0.1:8000/users/me", {
+                headers: {
+                    Authorization: `Bearer ${storedJwt}`,
+                },
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.username) {
+                        setUser({ username: data.username });
+                        setMessage(`Welcome back, ${data.username}!`);
+                    }
+                })
+                .catch(() => {
+                    localStorage.removeItem("jwt");
+                });
+        }
+    }, []);
 
     const register = async (username, password) => {
       try {
@@ -53,6 +73,7 @@ export const AuthProvider = ({
         if (response.ok) {
             const data = await response.json();
             setJwt(data.token);
+            localStorage.setItem("jwt", data.token);
             setUser({
                 username
             });
@@ -69,6 +90,7 @@ export const AuthProvider = ({
     const logout = () => {
       setUser(null);
       setJwt(null);
+      localStorage .removeItem("jwt");
       setMessage("Logout successful");
     };
 
